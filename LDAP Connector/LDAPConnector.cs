@@ -283,10 +283,8 @@ namespace LDAP_Connector
 
 			if (!membersDnsList.Contains(userDn))
 			{
-				membersDnsList.Add(userDn);
-
 				LdapModification[] modifications = {
-					new (LdapModification.Replace, GetLdapAttribute("member", membersDnsList.ToArray())) 
+					new (LdapModification.Add, GetLdapAttribute("member", userDn)) 
 				};
 
 				Connection.Modify(adGroupDn, modifications);
@@ -302,10 +300,8 @@ namespace LDAP_Connector
 
 			if (membersDnsList.Contains(userDn))
 			{
-				membersDnsList.Remove(userDn);
-
 				LdapModification[] modifications = {
-					new (LdapModification.Replace, GetLdapAttribute("member", membersDnsList.ToArray()))
+					new (LdapModification.Delete, GetLdapAttribute("member", userDn))
 				};
 
 				Connection.Modify(adGroupDn, modifications);
