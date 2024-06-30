@@ -1,18 +1,25 @@
-﻿using LDAP_Connector.Infrastructure;
+﻿using LDAP_Connector.Models;
+using LDAP_Connector.Models.Interfaces;
+using Novell.Directory.Ldap;
 
 namespace LDAP_Connector
 {
-	public interface ILDAPConnector
+    public interface ILDAPConnector
 	{
-		ILDAPConnector Connect();
-		void CreateAdGroup(string samAccountName, string displayName, string adGroupParentDn, string domainDn);
-		void UpdateAdGroup(string samAccountName, AttributesDictionary<string, object> attributes, string currentAdGroupDn, string domainDn, string newAdGroupParentDn);
-		void ArchiveAdGroup(string samAccountName, string currentAdGroupDn, string archivedParentDn, string domainDn);
-		void CreateUser(string samAccountName, string displayName, int userAccountControl, string userParentDn, string domainDn, AttributesDictionary<string, object> attributes = null);
-		void UpdateUser(string samAccountName, AttributesDictionary<string, object> attributes, string currentUserDn, string newUserParentDn, string smtpEmailDomain, string domainDn);
-		void ArchiveUser(string samAccountName, string currentUserDn, string archivedParentDn, string domainDn, AttributesDictionary<string, object> modifications = null);
-		void AddUserInAdGroup(string adGroupSamAccountName, string adGroupDn, string userDn, string domainDn);
-		void RemoveUserFromAdGroup(string adGroupSamAccountName, string adGroupDn, string userDn, string domainDn);
-		void UpdateAdGroupMembers(List<string> membersDns, string adGroupDn);
-	}
+        Task<string> GetEntryDn(string samAccountName, string baseDn);
+        Task<LdapAttributeSet> GetEntryAttributesBySamAccountName(string samAccountName, string baseDn);
+        Task<LdapAttributeSet> GetEntryAttributesByDn(string dn, string baseDn);
+        Task<AdGroup> GetGroup(string samAccountName, string baseDn);
+        Task<AdUser> GetUserBySamAccountName(string samAccountName, string baseDn);
+        Task<AdUser> GetUserByDn(string dn, string baseDn);
+        Task<IDictionary<string, string>> UpdateGroup(string dn, string samAccountName, IAttributesCollection attributes, string newParentDn, string baseDn);
+        Task<IDictionary<string, string>> UpdateUser(string dn, string smtpEmailDomain, IAttributesCollection attributes, string newParentDn, string baseDn);
+        Task<IDictionary<string, string>> ArchiveGroup(string dn, string samAccountName, string archivedParentDn, string baseDn);
+        Task<IDictionary<string, string>> ArchiveUser(string dn, string samAccountName, IAttributesCollection attributes, string archivedParentDn, string baseDn);
+        Task CreateGroup(string cn, string displayName, string samAccountName, string managerDn, string parentDn, string baseDn);
+        Task<string> CreateUser(IAttributesCollection attributes, string defaultPassword, string parentDn, string baseDn);
+        Task AddUserToGroup(string groupSamAcountName, string groupDn, string userSamAcountName, string userDn, string baseDn);
+        Task RemoveUserFromGroup(string groupSamAcountName, string groupDn, string userSamAcountName, string userDn, string baseDn);
+        Task<IDictionary<string, Tuple<string, bool>>> SyncUsersGroups(string dn, string userSamAccountName, List<string> targetGroupsDns, string baseDn);
+    }
 }

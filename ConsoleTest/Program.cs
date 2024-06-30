@@ -1,8 +1,59 @@
 ﻿using LDAP_Connector;
+using LDAP_Connector.Configuration;
+using LDAP_Connector.Helpers;
+using LDAP_Connector.Models;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
-ILDAPConnector LDAPConnector = new LDAPConnector("user", "password", "host", 123, new TimeSpan(0, 0, 5));
+try
+{
+    var connectorSettings = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json", true, true)
+        .Build()
+        .GetRequiredSection("LDAPConnector")
+        .Get<ConnectorSettings>();
 
-LDAPConnector.Connect().CreateAdGroup("Test_NewGroup", "NewTestGroup", "OU=Security groups,OU=Global", "DC=my,DC=domain,DC=test");
+    IOptions<ConnectorSettings> connectorSettingsOptions = Options.Create(connectorSettings);
 
-Console.WriteLine("New group has been created");
-Console.ReadLine();
+    var logger = LoggerFactory
+        .Create(builder =>
+        {
+            builder.AddFilter("Microsoft", LogLevel.Warning)
+                .AddFilter("System", LogLevel.Warning)
+                .AddFilter("LoggingConsoleApp.Program", LogLevel.Debug)
+                .AddConsole();
+        }).CreateLogger<LDAPConnector>();
+
+
+    ILDAPConnector ldapConnector = new LDAPConnector(connectorSettingsOptions, logger);
+
+    var userLogin = "testuser";
+    var baseDn = connectorSettings.BaseDn;
+
+    var adEntryDn = await ldapConnector.GetEntryDn(userLogin, baseDn);
+
+    if (string.IsNullOrWhiteSpace(adEntryDn))
+    {
+        throw new Exception($"User {userLogin} not found");
+    }
+
+    var adAttributes = await ldapConnector.GetEntryAttributesBySamAccountName(userLogin, baseDn);
+
+    var attributes = new AttributesCollection();
+
+    foreach (var adAttribute in adAttributes)
+    {
+        attributes.Add(adAttribute.Name, AdAttributesHelper.GetAdAttributeObject(adAttribute));
+    }
+
+    Console.WriteLine($"User {userLogin} properties:" +
+        $"\r\n    {string.Join("\r\n    ", attributes.GetValuesDictionary()
+            .Select(p => $"{p.Key}: {p.Value}"))}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error: {ex.Message}");
+}
+
+Console.Read();
